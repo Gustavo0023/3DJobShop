@@ -31,6 +31,8 @@ for step in p_steps:
 # Footer powered by Sato
 st.sidebar.markdown("---")
 st.sidebar.caption("Lunovu – powered by Sato")
+st.sidebar.markdown("[🌐 Zur Hauptseite von Sato](https://www.sato.de)", unsafe_allow_html=True)
+
 
 from pathlib import Path
 
