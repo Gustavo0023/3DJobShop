@@ -20,6 +20,7 @@ if "cookies_accepted" not in st.session_state:
     with col2:
         if st.button("Akzeptieren", key="cookie_btn"):
             st.session_state["cookies_accepted"] = True
+            st.experimental_rerun()  # sofort neu rendern, Banner verschwindet
     # kein st.stop(), App bleibt bedienbar
 
 # Add src to PATH für eigene Module
