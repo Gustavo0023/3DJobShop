@@ -7,7 +7,7 @@ from email_validator import validate_email, EmailNotValidError
 st.set_page_config(
     page_title="3D-JobShop Angebotsportal",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # add src to PATH
@@ -26,8 +26,8 @@ MATERIAL_DRAHT_XLSX  = "LMD_Materialliste_Draht.xlsx"
 st.sidebar.title("🛠️ Dein 3D-JobShop")
 st.sidebar.markdown("###### Dein Weg zum Bauteil in 7 Schritten")
 p_steps = ["Auftragsspezifikation", "Beschichtungsdicke", "Stückzahl", "Material", "Beschreibung", "Datei-Upload", "Kontaktdaten"]
-for i, step in enumerate(p_steps, 1):
-    st.sidebar.markdown(f"{i}. {step}")
+for step in p_steps:
+    st.sidebar.markdown(f"- {step}")
 
 # -- Hero Section --
 st.markdown("""
