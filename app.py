@@ -28,6 +28,24 @@ st.sidebar.markdown("###### Dein Weg zum Bauteil in 7 Schritten")
 p_steps = ["Auftragsspezifikation", "Beschichtungsdicke", "Stückzahl", "Material", "Beschreibung", "Datei-Upload", "Kontaktdaten"]
 for step in p_steps:
     st.sidebar.markdown(f"- {step}")
+# Footer powered by Sato
+st.sidebar.markdown("---")
+st.sidebar.caption("Lunovu – powered by Sato")
+
+from pathlib import Path
+
+with st.sidebar.expander("ℹ️ Impressum"):
+    st.markdown(Path("Impressum.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
+
+with st.sidebar.expander("🔒 Datenschutz"):
+    st.markdown(Path("Datenschutz.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
+
+with st.sidebar.expander("🍪 Cookie-Hinweis"):
+    st.markdown(Path("Cookies.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
+
+with st.sidebar.expander("📄 AGB"):
+    st.markdown(Path("AGB.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
+
 
 # -- Hero Section --
 st.markdown("""
