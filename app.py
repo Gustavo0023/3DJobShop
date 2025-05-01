@@ -52,7 +52,7 @@ with st.sidebar.expander("📄 AGB"):
 # -- Hero Section --
 st.markdown("""
 <div style="text-align:center; padding:20px 0;">
-  <h1 style="color:#0066CC; margin:20px 0;">Willkommen bei 3D-JobShop 🚀</h1>
+  <h1 style="color:#0066CC; margin:20px 0;">Willkommen bei 3D-JobShop </h1>
   <p style="font-size:18px;">Lade Deine Datei hoch, wähle Deine Optionen und erhalte in Kürze Dein Angebot &ndash; schnell, zuverlässig, einfach!</p>
 </div>
 """, unsafe_allow_html=True)
