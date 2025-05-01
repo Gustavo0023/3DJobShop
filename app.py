@@ -18,8 +18,8 @@ from core.notifier import send_order_email
 MAX_FILE_SIZE = 20 * 1024 * 1024
 
 # Excel-Dateinamen im Unterordner Excel
-MATERIAL_PULVER_XLSX = os.path.join("Excel", "LMD_Materialliste_Pulver.xlsx")
-MATERIAL_DRAHT_XLSX  = os.path.join("Excel", "LMD_Materialliste_Draht.xlsx")
+MATERIAL_PULVER_XLSX = os.path.join("LMD_Materialliste_Pulver.xlsx")
+MATERIAL_DRAHT_XLSX  = os.path.join("LMD_Materialliste_Draht.xlsx")
 
 # Materiallisten laden
 try:
