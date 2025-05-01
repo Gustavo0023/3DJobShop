@@ -3,19 +3,23 @@ import sys, os
 from io import BytesIO
 from email_validator import validate_email, EmailNotValidError
 
+# set_page_config must be the first Streamlit command
+st.set_page_config(page_title="3D-Druck Angebotsportal", layout="centered")
+
 # src-Ordner ins PYTHONPATH aufnehmen
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
-#from core.parser import load_mesh_from_file
+# Volume and area calculation removed for v2
+# from core.parser import load_mesh_from_file
 from core.data_loader import load_materials
 from core.notifier import send_order_email
 
 # Maximale Dateigröße in Bytes (20 MB)
 MAX_FILE_SIZE = 20 * 1024 * 1024
 
-# Excel-Dateinamen
-MATERIAL_PULVER_XLSX = "LMD_Materialliste_Pulver.xlsx"
-MATERIAL_DRAHT_XLSX  = "LMD_Materialliste_Draht.xlsx"
+# Excel-Dateinamen im Unterordner Excel
+MATERIAL_PULVER_XLSX = os.path.join("Excel", "LMD_Materialliste_Pulver.xlsx")
+MATERIAL_DRAHT_XLSX  = os.path.join("Excel", "LMD_Materialliste_Draht.xlsx")
 
 # Materiallisten laden
 try:
@@ -29,7 +33,6 @@ except FileNotFoundError:
     st.error(f"Draht-Materialliste nicht gefunden: {MATERIAL_DRAHT_XLSX}")
     draht_materials = []
 
-st.set_page_config(page_title="3D-Druck Angebotsportal", layout="centered")
 st.title("3D-JobShop")
 
 # 1) Auftragsspezifikation
@@ -85,13 +88,20 @@ send_physical = st.checkbox(
 
 uploaded_file = None
 if not send_physical:
+    # iOS Safari: accept=None und manuelle Filterung
     uploaded_file = st.file_uploader(
         "Datei auswählen (STL, STEP, SPT)",
-        type=["stl", "step", "stp"]
+        type=None
     )
-    if uploaded_file and uploaded_file.size > MAX_FILE_SIZE:
-        st.error("Datei überschreitet die maximal erlaubte Größe von 20 MB.")
-        uploaded_file = None
+    # Format-Check
+    if uploaded_file:
+        name_lower = uploaded_file.name.lower()
+        if not name_lower.endswith((".stl", ".step", ".stp")):
+            st.error("Ungültiges Dateiformat. Bitte STL, STEP oder SPT hochladen.")
+            uploaded_file = None
+        elif uploaded_file.size > MAX_FILE_SIZE:
+            st.error("Datei überschreitet die maximal erlaubte Größe von 20 MB.")
+            uploaded_file = None
 else:
     st.info(
         "Sie haben die Einsendungsoption gewählt. "
@@ -147,27 +157,23 @@ if st.button("Absenden"):
     if not email.strip():
         errors.append("Bitte geben Sie Ihre E-Mail-Adresse an.")
     else:
-        # E-Mail-Format validieren
         try:
             valid = validate_email(email)
-            email = valid.email  # ggf. normalisierte Adresse
+            email = valid.email
         except EmailNotValidError as e:
             errors.append(f"E-Mail ungültig: {e}")
-
     if material == "Andere" and (desired_material is None or not desired_material.strip()):
         errors.append("Bitte geben Sie Ihr Material an.")
 
-    # Fehlermeldungen anzeigen
     if errors:
         for err in errors:
             st.error(err)
     else:
         st.success("Daten erfasst. Weiterleitung erfolgt...")
-        # Dateien lesen
         file_bytes = uploaded_file.read() if uploaded_file else None
         buffer     = BytesIO(file_bytes) if file_bytes else None
 
-        # Zusätzliche Anhänge lesen
+        # Zusätzliche Anhänge
         add_bytes_list = []
         add_names_list = []
         if additional_files:
@@ -177,15 +183,6 @@ if st.button("Absenden"):
                 add_names_list.append(f.name)
 
         try:
-            """ volume = area = None
-            # Volumen & Fläche nur bei Neuproduktion mit Datei
-            if aub == "3D-Druck Neuproduktion" and buffer:
-                mesh = load_mesh_from_file(buffer, uploaded_file.name)
-                volume = mesh.volume
-                area   = mesh.area
-                st.write("**Volumen:**", f"{volume:.2f} mm³")
-                st.write("**Fläche:**", f"{area:.2f} mm²") """
-
             # Daten zusammenstellen
             mat_selected = desired_material if material == "Andere" else material
             order_data = {
@@ -200,9 +197,7 @@ if st.button("Absenden"):
                 "email": email,
                 "telefon": telefon,
                 "dateiname": uploaded_file.name if uploaded_file else None,
-                "einsendung": send_physical,
-               #"volumen_mm3": volume,
-               #"area_mm2": area
+                "einsendung": send_physical
             }
 
             # E-Mail versenden
