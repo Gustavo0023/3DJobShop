@@ -14,12 +14,12 @@ SENDER_EMAIL  = os.getenv("SENDER_EMAIL")
 RECIPIENTS    = [addr.strip() for addr in os.getenv("MAIL_RECIPIENTS", "").split(",") if addr.strip()]
 
 def send_order_email(
-        order_data: dict,
-        attachment_bytes: bytes = None,
-        attachment_name: str = None,
-        additional_bytes_list: List[bytes] = None,
-        additional_names_list: List[str] = None
-    ) -> None:
+    order_data: dict,
+    attachment_bytes: bytes = None,
+    attachment_name: str = None,
+    additional_bytes_list: List[bytes] = None,
+    additional_names_list: List[str] = None
+) -> None:
     """
     Verschickt eine E-Mail mit allen Auftragsdaten.
     Hängt die Haupt-3D-Datei an und bis zu 5 optionale Anhänge.
@@ -55,8 +55,11 @@ def send_order_email(
                 filename=name
             )
 
-    # SMTP-Versand
+    # SMTP-Versand mit explizitem Connect und EHLO/STARTTLS
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as smtp:
+        smtp.connect(SMTP_SERVER, SMTP_PORT)
+        smtp.ehlo()
         smtp.starttls()
+        smtp.ehlo()
         smtp.login(SMTP_USER, SMTP_PASSWORD)
         smtp.send_message(msg)
