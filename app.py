@@ -3,174 +3,153 @@ import sys, os
 from io import BytesIO
 from email_validator import validate_email, EmailNotValidError
 
-# set_page_config must be the first Streamlit command
-st.set_page_config(page_title="3D-Druck Angebotsportal", layout="wide")
+# Page configuration must be set first
+st.set_page_config(
+    page_title="3D-JobShop Angebotsportal",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# src-Ordner ins PYTHONPATH aufnehmen
+# add src to PATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
-# from core.parser import load_mesh_from_file  # Removed in v2
+# data and notifier imports
 from core.data_loader import load_materials
 from core.notifier import send_order_email
 
-# Maximale Dateigröße in Bytes (20 MB)
-MAX_FILE_SIZE = 20 * 1024 * 1024
+# constants
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
+MATERIAL_PULVER_XLSX = "LMD_Materialliste_Pulver.xlsx"
+MATERIAL_DRAHT_XLSX  = "LMD_Materialliste_Draht.xlsx"
 
-# Excel-Dateinamen
-MATERIAL_PULVER_XLSX = os.path.join("Excel", "LMD_Materialliste_Pulver.xlsx")
-MATERIAL_DRAHT_XLSX  = os.path.join("Excel", "LMD_Materialliste_Draht.xlsx")
+# -- Sidebar for progress --
+st.sidebar.title("🛠️ Dein 3D-JobShop")
+st.sidebar.markdown("###### Dein Weg zum Bauteil in 7 Schritten")
+p_steps = ["Auftragsspezifikation", "Beschichtungsdicke", "Stückzahl", "Material", "Beschreibung", "Datei-Upload", "Kontaktdaten"]
+for i, step in enumerate(p_steps, 1):
+    st.sidebar.markdown(f"{i}. {step}")
 
-# Hero Section
-st.image("assets/hero.jpg", use_column_width=True)
-st.title("Willkommen bei 3D-JobShop 🚀")
-st.subheader("Dein schneller Weg zum perfekten Bauteil – einfach Datei hochladen und Angebot erhalten!")
-# Trust Badge
-st.markdown("**ISO-zertifiziert** | ⭐⭐⭐⭐⭐ Kundenzufriedenheit")
+# -- Hero Section --
+st.markdown("""
+<div style="text-align:center; padding:20px 0;">
+  <h1 style="color:#0066CC; margin:20px 0;">Willkommen bei 3D-JobShop 🚀</h1>
+  <p style="font-size:18px;">Lade Deine Datei hoch, wähle Deine Optionen und erhalte in Kürze Dein Angebot &ndash; schnell, zuverlässig, einfach!</p>
+</div>
+""", unsafe_allow_html=True)
 st.markdown("---")
 
-# Load material lists
+# Load materials
+pulver_materials, draht_materials = [], []
 try:
     pulver_materials = load_materials(MATERIAL_PULVER_XLSX)
 except FileNotFoundError:
-    st.error(f"Pulver-Materialliste nicht gefunden: {MATERIAL_PULVER_XLSX}")
-    pulver_materials = []
+    st.warning("⚠️ Pulver-Materialliste nicht gefunden.")
 try:
     draht_materials = load_materials(MATERIAL_DRAHT_XLSX)
 except FileNotFoundError:
-    st.error(f"Draht-Materialliste nicht gefunden: {MATERIAL_DRAHT_XLSX}")
-    draht_materials = []
+    st.warning("⚠️ Draht-Materialliste nicht gefunden.")
 
-# 1) Auftragsspezifikation
-st.subheader("Schritt 1/7: 🏷️ Auftragsspezifikation")
-aub = st.radio(
-    "Auftragstyp auswählen:",
-    ["3D-Druck Neuproduktion", "3D-Druck Reparatur", "Beschichtung"]
-)
+# -- Form starts --
+with st.form(key="order_form", clear_on_submit=False):
+    st.subheader("Auftragsspezifikation")
+    aub = st.radio("Wähle den Auftragstyp:", ["Neuproduktion", "Reparatur", "Beschichtung"], index=0)
 
-# 2) Beschichtungsdicke nur bei Beschichtung
-dicht = None
-if aub == "Beschichtung":
-    st.subheader("Schritt 2/7: 🖌️ Beschichtungsdicke (mm)")
-    dicht = st.number_input(
-        "Gewünschte Beschichtungsdicke in mm",
-        min_value=0.01,
-        value=0.1,
-        step=0.01,
-        help="Wie dick soll die Schicht werden?"
+    st.subheader("Beschichtungsdicke (optional)")
+    dicht = None
+    if aub == "Beschichtung":
+        dicht = st.slider(
+            "Dicke in mm:", min_value=0.01, max_value=5.0, value=0.1, step=0.01,
+            help="Wie dick soll die Schicht werden?"
+        )
+
+    st.subheader("Stückzahl")
+    anzahl = st.number_input(
+        "Anzahl der Teile:", min_value=1, value=1, step=1,
+        help="Wie viele Teile benötigst Du?"
     )
 
-# 3) Stückzahl
-st.subheader("Schritt 3/7: 📦 Stückzahl")
-anzahl = st.number_input(
-    "Stückzahl",
-    min_value=1,
-    value=1,
-    step=1,
-    help="Wie viele Teile benötigst Du?"
-)
+    st.subheader("Material")
+    mat_typ = st.selectbox(
+        "Materialart:", ["Pulver", "Draht"],
+        help="Wähle Pulver oder Draht."
+    )
+    options = (pulver_materials if mat_typ == "Pulver" else draht_materials) + ["Anderes Material"]
+    material = st.selectbox(
+        "Material wählen:", options,
+        help="Wähle aus unserem Lager oder gib Dein Spezialmaterial an."
+    )
+    desired_material = None
+    if material == "Anderes Material":
+        desired_material = st.text_input(
+            "Spezifiziere Dein Material:", placeholder="z.B. Titan-Legierung"
+        )
 
-# 4) Materialtyp auswählen
-st.subheader("Schritt 4/7: 🔧 Materialtyp")
-mat_typ = st.radio("Materialtyp auswählen", ["Pulver", "Draht"])
-options = (pulver_materials if mat_typ == "Pulver" else draht_materials) + ["Andere"]
-material = st.selectbox(
-    "Material auswählen", options,
-    help="Wähle aus unserem Lager oder gib Dein Spezialmaterial an."
-)
-desired_material = None
-if material == "Andere":
-    desired_material = st.text_input(
-        "Eigenes Material:",
-        placeholder="z.B. Titan-Legierung"
+    st.subheader("Beschreibung")
+    beschreibung = st.text_area(
+        "Genauere Angaben:", placeholder="Welche Toleranzen, Oberflächen oder Besonderheiten?"
     )
 
-# 5) Beschreibung
-st.subheader("Schritt 5/7: 📝 Beschreibung")
-beschreibung = st.text_area(
-    "Bitte beschreibe Deine Vorgaben:",
-    placeholder="Welche Toleranzen, Oberflächen oder Besonderheiten?"
-)
-
-# 6) Upload oder Einsendung
-st.subheader("Schritt 6/7: 📂 3D-Datei hochladen")
-send_physical = st.checkbox(
-    "Ich möchte mein Bauteil einschicken für 3D-Scan"
-)
-
-uploaded_file = None
-if not send_physical:
-    uploaded_file = st.file_uploader(
-        "Datei auswählen (STL, STEP, SPT)",
-        type=None,
-        help="Zieh Deine Datei hierher oder klick zum Auswählen."
-    )
-    if uploaded_file:
-        name_lower = uploaded_file.name.lower()
-        if not name_lower.endswith((".stl", ".step", ".stp")):
-            st.error("Nur STL, STEP oder SPT erlaubt.")
-            uploaded_file = None
-        elif uploaded_file.size > MAX_FILE_SIZE:
-            st.error("Maximal 20 MB pro Datei.")
-            uploaded_file = None
-else:
-    st.info("Bitte sende Dein Bauteil nach Auftragsbestätigung an Sato Maschinenbau GmbH & Co. KG.")
-
-# 7) Zusätzliche Anhänge
-st.subheader("Schritt 7/7: 📎 Zusätzliche Anhänge (optional)")
-additional_files = st.file_uploader(
-    "Weitere Dateien anhängen",
-    type=None,
-    accept_multiple_files=True
-)
-if additional_files and len(additional_files) > 5:
-    st.warning("Maximal 5 Anhänge – die ersten 5 werden übernommen.")
-    additional_files = additional_files[:5]
-
-valid_additional = []
-for f in additional_files or []:
-    if f.size <= MAX_FILE_SIZE:
-        valid_additional.append(f)
+    st.subheader("Datei-Upload")
+    send_physical = st.checkbox("Bauteil physisch einschicken? 📦")
+    uploaded_file = None
+    if not send_physical:
+        uploaded_file = st.file_uploader(
+            "STL, STEP oder SPT hier hochladen:", type=None,
+            help="Zieh Deine Datei hierher oder klick zum Auswählen."
+        )
+        if uploaded_file:
+            name_lower = uploaded_file.name.lower()
+            if not name_lower.endswith((".stl", ".step", ".stp")):
+                st.error("Nur .stl, .step oder .stp erlaubt.")
+                uploaded_file = None
+            elif uploaded_file.size > MAX_FILE_SIZE:
+                st.error("Maximal 20 MB pro Datei.")
+                uploaded_file = None
     else:
-        st.warning(f"'{f.name}' ist zu groß und wurde entfernt.")
-additional_files = valid_additional
+        st.info("Bitte Dein Bauteil nach Bestätigung an Sato Maschinenbau schicken.")
 
-# Kontaktformular & Absenden
-st.markdown("---")
-with st.form("order_form"):
-    st.subheader("Deine Kontaktdaten & Absenden")
-    name = st.text_input("Name", placeholder="Max Mustermann")
-    firma = st.text_input("Firma", placeholder="z.B. Muster GmbH")
-    email = st.text_input("E-Mail", placeholder="deine@firma.de")
-    telefon = st.text_input("Telefon (optional)", placeholder="z.B. +49 123 4567890")
-    submitted = st.form_submit_button("Angebot anfordern 🚀")
+    st.subheader("Zusätzliche Anhänge (optional)")
+    additional_files = st.file_uploader(
+        "Weitere Anhänge (bis 5 Dateien):", accept_multiple_files=True
+    )
+    if additional_files and len(additional_files) > 5:
+        st.warning("Nur die ersten 5 Dateien werden übernommen.")
+        additional_files = additional_files[:5]
 
-    if submitted:
+    # Contact & submit
+    st.markdown("---")
+    st.subheader("Kontakt & Angebot anfordern ✉️")
+    name = st.text_input("Name:", placeholder="Max Mustermann")
+    firma = st.text_input("Firma:", placeholder="Muster GmbH")
+    email = st.text_input("E-Mail:", placeholder="deine@firma.de")
+    telefon = st.text_input("Telefon (optional):", placeholder="+49 123 4567890")
+    submit_button = st.form_submit_button(label="Angebot anfordern 🚀")
+
+    if submit_button:
         errors = []
         if not aub:
-            errors.append("Auftragstyp fehlt.")
+            errors.append("Bitte wähle einen Auftragstyp.")
         if not send_physical and not uploaded_file:
-            errors.append("Bitte 3D-Datei hochladen oder Einsendungsoption wählen.")
+            errors.append("Bitte lade eine 3D-Datei hoch oder wähle Einschicken.")
         if not name:
-            errors.append("Name eingeben.")
+            errors.append("Name ist erforderlich.")
         if not firma:
-            errors.append("Firma eingeben.")
+            errors.append("Firma ist erforderlich.")
         try:
-            validate = validate_email(email)
-            email = validate.email
+            validate_email(email)
         except EmailNotValidError:
             errors.append("Ungültige E-Mail-Adresse.")
-        if material == "Andere" and not desired_material:
-            errors.append("Material angeben.")
+        if material == "Anderes Material" and not desired_material:
+            errors.append("Bitte gib Dein spezielles Material an.")
 
         if errors:
-            for e in errors:
-                st.error(e)
+            for err in errors:
+                st.error(err)
         else:
-            st.success("👍 Deine Anfrage ist raus – wir melden uns in Kürze!")
-            # Dateien verarbeiten und E-Mail versenden
+            st.success("👍 Deine Anfrage ist unterwegs – wir melden uns umgehend!")
             file_bytes = uploaded_file.read() if uploaded_file else None
-            add_bytes = [f.read() for f in additional_files]
-            add_names = [f.name for f in additional_files]
+            add_bytes = [f.read() for f in additional_files] if additional_files else []
+            add_names = [f.name for f in additional_files] if additional_files else []
 
             order_data = {
                 "auftragstyp": aub,
@@ -195,4 +174,4 @@ with st.form("order_form"):
                     additional_names_list=add_names
                 )
             except Exception as e:
-                st.error(f"Fehler beim Versand: {e}")
+                st.error(f"E-Mail-Versand fehlgeschlagen: {e}")
