@@ -132,82 +132,79 @@ if additional_files:
             valid_additional.append(f)
     additional_files = valid_additional
 
-# 7) Kontaktdaten
+# 7) Auftrag absenden via Formular
 st.markdown("---")
-st.header("Kontaktdaten")
-name    = st.text_input("Name")
-firma   = st.text_input("Firma")
-email   = st.text_input("E-Mail")
-telefon = st.text_input("Telefon (optional)")
+with st.form("order_form"):
+    st.header("Kontaktdaten & Absenden")
+    name    = st.text_input("Name")
+    firma   = st.text_input("Firma")
+    email   = st.text_input("E-Mail")
+    telefon = st.text_input("Telefon (optional)")
+    submitted = st.form_submit_button("Absenden")
+    
+    if submitted:
+        errors = []
+        # Pflichtfelder
+        if not aub:
+            errors.append("Bitte wählen Sie eine Auftragsart aus.")
+        if not send_physical and not uploaded_file:
+            errors.append("Bitte laden Sie eine 3D-Datei hoch oder wählen Sie die Einsendungsoption.")
+        if not name.strip():
+            errors.append("Bitte geben Sie Ihren Namen an.")
+        if not firma.strip():
+            errors.append("Bitte geben Sie Ihre Firma an.")
+        if not email.strip():
+            errors.append("Bitte geben Sie Ihre E-Mail-Adresse an.")
+        else:
+            try:
+                valid = validate_email(email)
+                email = valid.email
+            except EmailNotValidError as e:
+                errors.append(f"E-Mail ungültig: {e}")
+        if material == "Andere" and (desired_material is None or not desired_material.strip()):
+            errors.append("Bitte geben Sie Ihr Material an.")
 
-# 8) Absenden
-st.markdown("---")
-if st.button("Absenden"):
-    errors = []
+        if errors:
+            for err in errors:
+                st.error(err)
+        else:
+            st.success("Daten erfasst. Weiterleitung erfolgt...")
+            file_bytes = uploaded_file.read() if uploaded_file else None
+            # Zusätzliche Anhänge
+            add_bytes_list = []
+            add_names_list = []
+            if additional_files:
+                for f in additional_files:
+                    data = f.read()
+                    add_bytes_list.append(data)
+                    add_names_list.append(f.name)
 
-    # Pflichtfelder
-    if not aub:
-        errors.append("Bitte wählen Sie eine Auftragsart aus.")
-    if not send_physical and not uploaded_file:
-        errors.append("Bitte laden Sie eine 3D-Datei hoch oder wählen Sie die Einsendungsoption.")
-    if not name.strip():
-        errors.append("Bitte geben Sie Ihren Namen an.")
-    if not firma.strip():
-        errors.append("Bitte geben Sie Ihre Firma an.")
-    if not email.strip():
-        errors.append("Bitte geben Sie Ihre E-Mail-Adresse an.")
-    else:
-        try:
-            valid = validate_email(email)
-            email = valid.email
-        except EmailNotValidError as e:
-            errors.append(f"E-Mail ungültig: {e}")
-    if material == "Andere" and (desired_material is None or not desired_material.strip()):
-        errors.append("Bitte geben Sie Ihr Material an.")
+            try:
+                # Daten zusammenstellen
+                mat_selected = desired_material if material == "Andere" else material
+                order_data = {
+                    "auftragstyp": aub,
+                    "anzahl": anzahl,
+                    "materialtyp": mat_typ,
+                    "material": mat_selected,
+                    "beschichtungsdicke_mm": dicht,
+                    "beschreibung": beschreibung,
+                    "name": name,
+                    "firma": firma,
+                    "email": email,
+                    "telefon": telefon,
+                    "dateiname": uploaded_file.name if uploaded_file else None,
+                    "einsendung": send_physical
+                }
 
-    if errors:
-        for err in errors:
-            st.error(err)
-    else:
-        st.success("Daten erfasst. Weiterleitung erfolgt...")
-        file_bytes = uploaded_file.read() if uploaded_file else None
-        buffer     = BytesIO(file_bytes) if file_bytes else None
-
-        # Zusätzliche Anhänge
-        add_bytes_list = []
-        add_names_list = []
-        if additional_files:
-            for f in additional_files:
-                data = f.read()
-                add_bytes_list.append(data)
-                add_names_list.append(f.name)
-
-        try:
-            # Daten zusammenstellen
-            mat_selected = desired_material if material == "Andere" else material
-            order_data = {
-                "auftragstyp": aub,
-                "anzahl": anzahl,
-                "materialtyp": mat_typ,
-                "material": mat_selected,
-                "beschichtungsdicke_mm": dicht,
-                "beschreibung": beschreibung,
-                "name": name,
-                "firma": firma,
-                "email": email,
-                "telefon": telefon,
-                "dateiname": uploaded_file.name if uploaded_file else None,
-                "einsendung": send_physical
-            }
-
-            # E-Mail versenden
-            send_order_email(
-                order_data=order_data,
-                attachment_bytes=file_bytes,
-                attachment_name=uploaded_file.name if uploaded_file else None,
-                additional_bytes_list=add_bytes_list,
-                additional_names_list=add_names_list
-            )
-            st.success("✅ E-Mail wurde versendet.")
-        except Exception as e:
-            st.error(f"Fehler beim Versand: {e}")
+                # E-Mail versenden
+                send_order_email(
+                    order_data=order_data,
+                    attachment_bytes=file_bytes,
+                    attachment_name=uploaded_file.name if uploaded_file else None,
+                    additional_bytes_list=add_bytes_list,
+                    additional_names_list=add_names_list
+                )
+                st.success("✅ E-Mail wurde versendet.")
+            except Exception as e:
+                st.error(f"Fehler beim Versand: {e}")
