@@ -1,6 +1,7 @@
 import streamlit as st
 import sys, os
 from io import BytesIO
+from pathlib import Path
 from email_validator import validate_email, EmailNotValidError
 
 # Page configuration must be set first
@@ -9,6 +10,32 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# Cookie-Zustimmung (nur einmal)
+if "cookies_accepted" not in st.session_state:
+    with st.sidebar:
+        st.markdown("### 🍪 Cookie-Hinweis")
+        st.info(
+            """
+Wir verwenden Cookies, um die Funktionalität der Anwendung zu gewährleisten 
+(z. B. Session-Handling). Für Analyse-Cookies benötigen wir deine Zustimmung.
+"""
+        )
+        if st.button("✅ Ich stimme zu"):
+            st.session_state["cookies_accepted"] = True
+            st.experimental_rerun()
+        else:
+            st.stop()
+
+# Analytics-Snippet nur nach Zustimmung
+if st.session_state.get("cookies_accepted"):
+    st.components.v1.html(
+        """
+<!-- Beispiel: Plausible Analytics -->
+<script async defer data-domain="deine-domain.de" src="https://plausible.io/js/script.js"></script>
+""",
+        height=0,
+    )
 
 # add src to PATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
@@ -33,26 +60,20 @@ st.sidebar.markdown("---")
 st.sidebar.caption("Lunovu – powered by Sato")
 st.sidebar.markdown("[🌐 Zur Hauptseite von Sato](https://www.sato.de)", unsafe_allow_html=True)
 
-
-from pathlib import Path
-
+# Rechtstexte
 with st.sidebar.expander("ℹ️ Impressum"):
     st.markdown(Path("Impressum.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
-
 with st.sidebar.expander("🔒 Datenschutz"):
     st.markdown(Path("Datenschutz.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
-
 with st.sidebar.expander("🍪 Cookie-Hinweis"):
     st.markdown(Path("Cookies.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
-
 with st.sidebar.expander("📄 AGB"):
     st.markdown(Path("AGB.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
-
 
 # -- Hero Section --
 st.markdown("""
 <div style="text-align:center; padding:20px 0;">
-  <h1 style="color:#0066CC; margin:20px 0;">Willkommen bei 3D-JobShop </h1>
+  <h1 style="color:#0066CC; margin:20px 0;">Willkommen bei 3D-JobShop</h1>
   <p style="font-size:18px;">Lade Deine Datei hoch, wähle Deine Optionen und erhalte in Kürze Dein Angebot &ndash; schnell, zuverlässig, einfach!</p>
 </div>
 """, unsafe_allow_html=True)
@@ -90,8 +111,7 @@ with st.form(key="order_form", clear_on_submit=False):
 
     st.subheader("Material")
     mat_typ = st.selectbox(
-        "Materialart:", ["Pulver", "Draht"],
-        help="Wähle Pulver oder Draht."
+        "Materialart:", ["Pulver", "Draht"], help="Wähle Pulver oder Draht."
     )
     options = (pulver_materials if mat_typ == "Pulver" else draht_materials) + ["Anderes Material"]
     material = st.selectbox(
