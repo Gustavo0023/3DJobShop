@@ -1,0 +1,9 @@
+git+https://github.com/tpaviot/pythonocc-core.git@7.6.2#egg=pythonocc-core
+streamlit
+pandas
+openpyxl
+python-dotenv
+email-validator
+numpy
+trimesh
+secure-smtplib

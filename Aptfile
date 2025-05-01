@@ -1,0 +1,7 @@
+libglu1-mesa-dev
+libgl1-mesa-dev
+libosmesa6-dev
+pkg-config
+libx11-dev
+libxext-dev
+libxrandr-dev

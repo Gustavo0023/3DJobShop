@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+*.xlsx
+*.stl
+*.step
+*.stp
