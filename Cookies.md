@@ -17,8 +17,7 @@ Um mehr über Cookies zu erfahren, u. a. wie man erkennt, welche Cookies gesetzt
 
  
 
-Alternativ ist es auch möglich, dass der Browser Cookies grundsätzlich blockiert. Dazu müssen Nutzer die Cookie-Einstellungen im Browser entsprechend ändern. Diese Einstellungen befinden sich normalerweise im Menü des Browsers unter „Optionen“ oder „Präferenzen“.
-
+Alternativ ist es auch möglich, dass der Browser Cookies grundsätzlich blockiert. Dazu müssen Nutzer die Cookie-Einstellungen im Browser entsprechend ändern. Diese Einstellungen befinden sich normalerweise im Menü des Browsers unter „Optionen“ oder „Präferenzen“. 
  
 
 Das Löschen unserer Cookies oder die Deaktivierung zukünftiger Cookies oder Tracking-Technologien kann zur Folge haben, dass bestimmte Bereiche oder Funktionen unserer Dienste nicht mehr zur Verfügung stehen oder das Nutzererlebnis anderweitig beeinträchtigt wird.
