@@ -1,40 +1,43 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import sys, os
 from io import BytesIO
 from pathlib import Path
 from email_validator import validate_email, EmailNotValidError
 
-# Page configuration must be set first
+# Page configuration
 st.set_page_config(
     page_title="3D-JobShop Angebotsportal",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Cookie-Hinweis oben als Inline-Popup
-if "cookies_accepted" not in st.session_state:
-    col1, col2 = st.columns([8,1])
-    with col1:
-        st.info("Wir verwenden Cookies für Sitzungs-Handling und anonyme Analyse.")
-    with col2:
-        if st.button("Akzeptieren", key="cookie_btn"):
-            st.session_state["cookies_accepted"] = True
-            st.experimental_rerun()  # sofort neu rendern, Banner verschwindet
-    # kein st.stop(), App bleibt bedienbar
+# --- Cookie-Hinweis oben, dezent neben Button ---
+if not st.session_state.get("cookies_accepted", False):
+    placeholder = st.empty()
+    with placeholder.container():
+        col_text, col_button = st.columns([7,1])
+        with col_text:
+            st.markdown(
+                "🍪 Wir verwenden Cookies für Sitzungs-Handling und anonyme Analyse.",
+                unsafe_allow_html=True
+            )
+        with col_button:
+            if st.button("Akzeptieren", key="cookie_accept_top"):
+                st.session_state["cookies_accepted"] = True
+                placeholder.empty()  # Entfernt Banner im selben Lauf
+    st.markdown("---")
 
-# Add src to PATH für eigene Module
+# Add src to PATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
-
 from core.data_loader import load_materials
 from core.notifier import send_order_email
 
-# Konstanten
-MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
+# Constants
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 MATERIAL_PULVER_XLSX = "LMD_Materialliste_Pulver.xlsx"
 MATERIAL_DRAHT_XLSX  = "LMD_Materialliste_Draht.xlsx"
 
-# Sidebar-Navigation
+# Sidebar navigation
 st.sidebar.title("🛠️ Dein 3D-JobShop")
 st.sidebar.markdown("###### Dein Weg zum Bauteil in 7 Schritten")
 p_steps = ["Auftragsspezifikation", "Beschichtungsdicke", "Stückzahl", "Material", "Beschreibung", "Datei-Upload", "Kontaktdaten"]
@@ -44,26 +47,28 @@ st.sidebar.markdown("---")
 st.sidebar.caption("Lunovu – powered by Sato")
 st.sidebar.markdown("[🌐 Zur Hauptseite von Sato](https://www.sato.de)", unsafe_allow_html=True)
 
-# Rechtstexte im Sidebar
-with st.sidebar.expander("ℹ️ Impressum"):
-    st.markdown(Path("Impressum.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
-with st.sidebar.expander("🔒 Datenschutz"):
-    st.markdown(Path("Datenschutz.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
-with st.sidebar.expander("🍪 Cookie-Hinweis"):
-    st.markdown(Path("Cookies.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
-with st.sidebar.expander("📄 AGB"):
-    st.markdown(Path("AGB.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
+# Legal text expanders
+for title, filename in [
+    ("ℹ️ Impressum", "Impressum.md"),
+    ("🔒 Datenschutz", "Datenschutz.md"),
+    ("🍪 Cookie-Hinweis", "Cookies.md"),
+    ("📄 AGB", "AGB.md")
+]:
+    with st.sidebar.expander(title):
+        st.markdown(Path(filename).read_text(encoding="utf-8"), unsafe_allow_html=True)
 
-# Hero Section
-st.markdown("""
-<div style="text-align:center; padding:20px 0;">
-  <h1 style="color:#0066CC; margin:20px 0;">Willkommen bei 3D-JobShop</h1>
-  <p style="font-size:18px;">Lade Deine Datei hoch, wähle Deine Optionen und erhalte in Kürze Dein Angebot – schnell, zuverlässig, einfach!</p>
-</div>
-""", unsafe_allow_html=True)
+# Hero section
+st.markdown(
+    """
+    <div style="text-align:center; padding:20px 0;">
+      <h1 style="color:#0066CC;">Willkommen bei 3D-JobShop</h1>
+      <p>Lade Deine Datei hoch, wähle Deine Optionen und erhalte in Kürze Dein Angebot – schnell, zuverlässig, einfach!</p>
+    </div>
+    """, unsafe_allow_html=True
+)
 st.markdown("---")
 
-# Materialien laden
+# Load materials
 pulver_materials, draht_materials = [], []
 try:
     pulver_materials = load_materials(MATERIAL_PULVER_XLSX)
@@ -74,16 +79,16 @@ try:
 except FileNotFoundError:
     st.warning(f"⚠️ Draht-Materialliste nicht gefunden: {MATERIAL_DRAHT_XLSX}")
 
-# Auftragsformular
+# Order form
 with st.form("order_form", clear_on_submit=False):
     st.subheader("Auftragsspezifikation")
     aub = st.radio("Wähle den Auftragstyp:", ["Neuproduktion", "Reparatur", "Beschichtung"], index=0)
 
     st.subheader("Beschichtungsdicke (optional)")
-    dicht = st.slider("Dicke in mm:", 0.01, 5.0, 0.1, step=0.01) if aub == "Beschichtung" else None
+    dicht = st.slider("Dicke in mm:", 0.01, 5.0, 0.1) if aub == "Beschichtung" else None
 
     st.subheader("Stückzahl")
-    anzahl = st.number_input("Anzahl der Teile:", min_value=1, value=1, step=1)
+    anzahl = st.number_input("Anzahl der Teile:", min_value=1, value=1)
 
     st.subheader("Material")
     mat_typ = st.selectbox("Materialart:", ["Pulver", "Draht"])
@@ -96,7 +101,7 @@ with st.form("order_form", clear_on_submit=False):
 
     st.subheader("Datei-Upload")
     send_physical = st.checkbox("Bauteil physisch einschicken? 📦")
-    uploaded_file = st.file_uploader("STL, STEP oder SPT hier hochladen:", type=["stl","step","stp"]) if not send_physical else None
+    uploaded_file = st.file_uploader("STL, STEP oder SPT hochladen:", type=["stl","step","stp"]) if not send_physical else None
     if uploaded_file and uploaded_file.size > MAX_FILE_SIZE:
         st.error("Maximal 20 MB pro Datei.")
         uploaded_file = None
