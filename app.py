@@ -24,7 +24,7 @@ if not st.session_state.get("cookies_accepted", False):
         with col_button:
             if st.button("Akzeptieren", key="cookie_accept_top"):
                 st.session_state["cookies_accepted"] = True
-                placeholder.empty()  # Entfernt Banner im selben Lauf
+                placeholder.empty()
     st.markdown("---")
 
 # Add src to PATH
@@ -106,8 +106,69 @@ with st.form("order_form", clear_on_submit=False):
         type=None,
         help="Wähle deine STL-, STEP- oder SPT-Datei aus deinem Dateimanager."
     ) if not send_physical else None
-        # iOS Safari Hinweis für Dateitypen
-    st.caption("Tipp: In Safari auf 'Durchsuchen' tippen und im Dateiauswahl-Dialog oben 'Alle Dateien' wählen, um STL/STEP/SPT anzuzeigen.")
-    # Manuelle Formatprüfung für iOS Safari
+    st.caption(
+        "Tipp: In Safari auf 'Durchsuchen' tippen und im Dateiauswahl-Dialog oben 'Alle Dateien' wählen, um STL/STEP/SPT anzuzeigen."
+    )
     if uploaded_file:
         name_lower = uploaded_file.name.lower()
+        if not name_lower.endswith((".stl", ".step", ".stp")):
+            st.error("Ungültiges Format: Bitte STL, STEP oder SPT hochladen.")
+            uploaded_file = None
+
+    st.subheader("Zusätzliche Anhänge (optional)")
+    additional_files = st.file_uploader("Weitere Anhänge (bis 5 Dateien):", accept_multiple_files=True)
+    if additional_files and len(additional_files) > 5:
+        st.warning("Nur die ersten 5 Dateien werden übernommen.")
+        additional_files = additional_files[:5]
+
+    st.markdown("---")
+    st.subheader("Kontakt & Angebot anfordern ✉️")
+    name = st.text_input("Name:")
+    firma = st.text_input("Firma:")
+    email = st.text_input("E-Mail:")
+    telefon = st.text_input("Telefon (optional):")
+
+    # Submit button
+    submitted = st.form_submit_button("Angebot anfordern 🚀")
+
+    if submitted:
+        errors = []
+        if not name:
+            errors.append("Name ist erforderlich.")
+        if not firma:
+            errors.append("Firma ist erforderlich.")
+        try:
+            validate_email(email)
+        except Exception:
+            errors.append("Ungültige E-Mail-Adresse.")
+        if not send_physical and not uploaded_file:
+            errors.append("Bitte lade eine 3D-Datei hoch oder wähle Einschicken.")
+        if material == "Anderes Material" and not desired_material:
+            errors.append("Bitte gib Dein spezielles Material an.")
+
+        if errors:
+            for err in errors:
+                st.error(err)
+        else:
+            st.success("👍 Deine Anfrage ist unterwegs – wir melden uns umgehend!")
+            file_bytes = uploaded_file.read() if uploaded_file else None
+            add_bytes = [f.read() for f in additional_files] if additional_files else []
+            add_names = [f.name for f in additional_files] if additional_files else []
+            order_data = {
+                "auftragstyp": aub,
+                "anzahl": anzahl,
+                "materialtyp": mat_typ,
+                "material": desired_material or material,
+                "beschichtungsdicke_mm": dicht,
+                "beschreibung": beschreibung,
+                "name": name,
+                "firma": firma,
+                "email": email,
+                "telefon": telefon,
+                "dateiname": uploaded_file.name if uploaded_file else None,
+                "einsendung": send_physical
+            }
+            try:
+                send_order_email(order_data, file_bytes, uploaded_file.name if uploaded_file else None, add_bytes, add_names)
+            except Exception as e:
+                st.error(f"E-Mail-Versand fehlgeschlagen: {e}")
