@@ -101,7 +101,18 @@ with st.form("order_form", clear_on_submit=False):
 
     st.subheader("Datei-Upload")
     send_physical = st.checkbox("Bauteil physisch einschicken? 📦")
-    uploaded_file = st.file_uploader("STL, STEP oder SPT hochladen:", type=["stl","step","stp"]) if not send_physical else None
+    uploaded_file = st.file_uploader(
+        "STL, STEP oder SPT hochladen:",
+        type=None,
+        help="Wähle deine STL-, STEP- oder SPT-Datei aus deinem Dateimanager."
+    ) if not send_physical else None
+    # Manuelle Formatprüfung für iOS Safari
+    if uploaded_file:
+        name_lower = uploaded_file.name.lower()
+        if not name_lower.endswith((".stl", ".step", ".stp")):
+            st.error("Ungültiges Format: Bitte STL, STEP oder SPT hochladen.")
+            uploaded_file = None
+
     if uploaded_file and uploaded_file.size > MAX_FILE_SIZE:
         st.error("Maximal 20 MB pro Datei.")
         uploaded_file = None
