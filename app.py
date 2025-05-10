@@ -40,22 +40,17 @@ MATERIAL_DRAHT_XLSX  = "LMD_Materialliste_Draht.xlsx"
 # Sidebar navigation
 st.sidebar.title("🛠️ Dein 3D-JobShop")
 st.sidebar.markdown("###### Dein Weg zum Bauteil in 7 Schritten")
-p_steps = ["Auftragsspezifikation", "Beschichtungsdicke", "Stückzahl", "Material", "Beschreibung", "Datei-Upload", "Kontaktdaten"]
+p_steps = [
+    "Auftragsspezifikation", "Beschichtungsdicke", "Stückzahl",
+    "Material", "Beschreibung", "Datei-Upload", "Kontaktdaten"
+]
 for step in p_steps:
     st.sidebar.markdown(f"- {step}")
 st.sidebar.markdown("---")
 st.sidebar.caption("Lunovu – powered by Sato")
-st.sidebar.markdown("[🌐 Zur Hauptseite von Sato](https://www.sato.de)", unsafe_allow_html=True)
-
-# Legal text expanders
-for title, filename in [
-    ("ℹ️ Impressum", "Impressum.md"),
-    ("🔒 Datenschutz", "Datenschutz.md"),
-    ("🍪 Cookie-Hinweis", "Cookies.md"),
-    ("📄 AGB", "AGB.md")
-]:
-    with st.sidebar.expander(title):
-        st.markdown(Path(filename).read_text(encoding="utf-8"), unsafe_allow_html=True)
+st.sidebar.markdown(
+    "[🌐 Zur Hauptseite von Sato](https://www.sato.de)", unsafe_allow_html=True
+)
 
 # Hero section
 st.markdown(
@@ -82,7 +77,11 @@ except FileNotFoundError:
 # Order form
 with st.form("order_form", clear_on_submit=False):
     st.subheader("Auftragsspezifikation")
-    aub = st.radio("Wähle den Auftragstyp:", ["Neuproduktion", "Reparatur", "Beschichtung"], index=0)
+    aub = st.radio(
+        "Wähle den Auftragstyp:",
+        ["Neuproduktion", "Reparatur", "Beschichtung"],
+        index=0
+    )
 
     st.subheader("Beschichtungsdicke (optional)")
     dicht = st.slider("Dicke in mm:", 0.01, 5.0, 0.1) if aub == "Beschichtung" else None
@@ -92,9 +91,14 @@ with st.form("order_form", clear_on_submit=False):
 
     st.subheader("Material")
     mat_typ = st.selectbox("Materialart:", ["Pulver", "Draht"])
-    options = (pulver_materials if mat_typ == "Pulver" else draht_materials) + ["Anderes Material"]
+    options = (
+        pulver_materials if mat_typ == "Pulver" else draht_materials
+    ) + ["Anderes Material"]
     material = st.selectbox("Material auswählen:", options)
-    desired_material = st.text_input("Spezifiziere Dein Material:") if material == "Anderes Material" else None
+    desired_material = (
+        st.text_input("Spezifiziere Dein Material:")
+        if material == "Anderes Material" else None
+    )
 
     st.subheader("Beschreibung")
     beschreibung = st.text_area("Genauere Angaben:")
@@ -102,8 +106,7 @@ with st.form("order_form", clear_on_submit=False):
     st.subheader("Datei-Upload")
     send_physical = st.checkbox("Bauteil physisch einschicken? 📦")
     uploaded_file = st.file_uploader(
-        "STL, STEP oder SPT hochladen:",
-        type=None,
+        "STL, STEP oder SPT hochladen:", type=None,
         help="Wähle deine STL-, STEP- oder SPT-Datei aus deinem Dateimanager."
     ) if not send_physical else None
     st.caption(
@@ -116,7 +119,10 @@ with st.form("order_form", clear_on_submit=False):
             uploaded_file = None
 
     st.subheader("Zusätzliche Anhänge (optional)")
-    additional_files = st.file_uploader("Weitere Anhänge (bis 5 Dateien):", accept_multiple_files=True)
+    additional_files = st.file_uploader(
+        "Weitere Anhänge (bis 5 Dateien):",
+        accept_multiple_files=True
+    )
     if additional_files and len(additional_files) > 5:
         st.warning("Nur die ersten 5 Dateien werden übernommen.")
         additional_files = additional_files[:5]
@@ -139,10 +145,12 @@ with st.form("order_form", clear_on_submit=False):
             errors.append("Firma ist erforderlich.")
         try:
             validate_email(email)
-        except Exception:
+        except EmailNotValidError:
             errors.append("Ungültige E-Mail-Adresse.")
         if not send_physical and not uploaded_file:
-            errors.append("Bitte lade eine 3D-Datei hoch oder wähle Einschicken.")
+            errors.append(
+                "Bitte lade eine 3D-Datei hoch oder wähle Einschicken."
+            )
         if material == "Anderes Material" and not desired_material:
             errors.append("Bitte gib Dein spezielles Material an.")
 
@@ -151,9 +159,17 @@ with st.form("order_form", clear_on_submit=False):
                 st.error(err)
         else:
             st.success("👍 Deine Anfrage ist unterwegs – wir melden uns umgehend!")
-            file_bytes = uploaded_file.read() if uploaded_file else None
-            add_bytes = [f.read() for f in additional_files] if additional_files else []
-            add_names = [f.name for f in additional_files] if additional_files else []
+            file_bytes = (
+                uploaded_file.read() if uploaded_file else None
+            )
+            add_bytes = (
+                [f.read() for f in additional_files]
+                if additional_files else []
+            )
+            add_names = (
+                [f.name for f in additional_files]
+                if additional_files else []
+            )
             order_data = {
                 "auftragstyp": aub,
                 "anzahl": anzahl,
@@ -165,10 +181,30 @@ with st.form("order_form", clear_on_submit=False):
                 "firma": firma,
                 "email": email,
                 "telefon": telefon,
-                "dateiname": uploaded_file.name if uploaded_file else None,
+                "dateiname": (
+                    uploaded_file.name if uploaded_file else None
+                ),
                 "einsendung": send_physical
             }
             try:
-                send_order_email(order_data, file_bytes, uploaded_file.name if uploaded_file else None, add_bytes, add_names)
+                send_order_email(
+                    order_data,
+                    file_bytes,
+                    uploaded_file.name if uploaded_file else None,
+                    add_bytes,
+                    add_names
+                )
             except Exception as e:
                 st.error(f"E-Mail-Versand fehlgeschlagen: {e}")
+
+# --- Footer Rechts-Texte ---
+st.markdown("---")
+# Statt Links: Expanders für direkten Inhalt
+with st.expander("ℹ️ Impressum"):  
+    st.markdown(Path("Impressum.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
+with st.expander("🔒 Datenschutz"):  
+    st.markdown(Path("Datenschutz.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
+with st.expander("🍪 Cookie-Hinweis"):  
+    st.markdown(Path("Cookies.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
+with st.expander("📄 AGB"):  
+    st.markdown(Path("AGB.md").read_text(encoding="utf-8"), unsafe_allow_html=True)
